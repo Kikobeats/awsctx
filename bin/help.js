@@ -8,4 +8,5 @@ module.exports = `
   ${white('awsctx <PROFILE>')}             : ${gray('switch to profile <PROFILE>')}
   ${white('awsctx -c, --current')}         : ${gray('show the current profile name')}
   ${white('awsctx -h,--help')}             : ${gray('show this message')}
+  ${white('awsctx -r,--refresh')}          : ${gray('force refresh SSO token for current or specified profile')}
 `

@@ -29,6 +29,7 @@
   ],
   "dependencies": {
     "@inquirer/prompts": "~7.7.1",
+    "debug-logfmt": "~1.2.3",
     "ini": "~5.0.0",
     "mri": "~1.2.0"
   },

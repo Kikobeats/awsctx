@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+const debug = require('debug-logfmt')('awsctx')
 const { select } = require('@inquirer/prompts')
 const { execSync } = require('child_process')
 const { styleText } = require('node:util')
@@ -32,8 +33,10 @@ function getAWSProfiles () {
     }
   }
 
-  extractProfiles(credentialsPath) // no "profile " prefix in this file
-  extractProfiles(configPath, true) // "profile " prefix used here
+  // no "profile " prefix in this file
+  extractProfiles(credentialsPath)
+  // "profile " prefix used here
+  extractProfiles(configPath, true)
 
   return Array.from(profiles)
 }
@@ -56,31 +59,62 @@ function getSSOConfig () {
 }
 
 function isSSOSessionValid () {
-  if (!fs.existsSync(ssoCacheDir)) return false
+  debug('checking SSO session validity', { ssoCacheDir })
+
+  if (!fs.existsSync(ssoCacheDir)) {
+    debug('SSO cache directory does not exist', { ssoCacheDir })
+    return false
+  }
 
   const now = new Date()
   const files = fs.readdirSync(ssoCacheDir).filter(f => f.endsWith('.json'))
+  debug('found cache files', { files, count: files.length })
 
-  for (const file of files) {
+  const validFiles = files.filter(file => {
     const fullPath = path.join(ssoCacheDir, file)
     try {
       const data = JSON.parse(fs.readFileSync(fullPath, 'utf8'))
-      if (data.expiresAt) {
-        const expiry = new Date(data.expiresAt)
-        if (expiry > now) return true
-      }
-    } catch (_) {
-      // ignore malformed files
-    }
-  }
+      debug('checking cache file', { file, keys: Object.keys(data) })
 
-  return false
+      if (data.accessToken && data.expiresAt) {
+        const expiry = new Date(data.expiresAt)
+        const isValid = expiry > now
+        debug('access token found', { file, expiresAt: data.expiresAt, isValid, timeLeft: expiry - now })
+        return isValid
+      }
+
+      if (data.startUrl && data.expiresAt) {
+        const expiry = new Date(data.expiresAt)
+        const isValid = expiry > now
+        debug('SSO session found', { file, startUrl: data.startUrl, expiresAt: data.expiresAt, isValid, timeLeft: expiry - now })
+        return isValid
+      }
+
+      debug('file does not contain valid token data', { file })
+      return false
+    } catch (error) {
+      debug('failed to parse cache file', { file, error: error.message })
+      return false
+    }
+  })
+
+  const isValid = validFiles.length > 0
+  debug('SSO session validation result', { validFiles, isValid })
+  return isValid
 }
 
 async function main () {
   const profiles = getAWSProfiles()
   const ssoProfiles = getSSOConfig()
   const currentProfile = fs.existsSync(profileFile) ? fs.readFileSync(profileFile, 'utf8') : 'default'
+
+  debug('initialized', {
+    profiles,
+    ssoProfiles: Object.keys(ssoProfiles),
+    currentProfile,
+    profileFile,
+    ssoCacheDir
+  })
 
   if (profiles.length === 0) {
     console.error('No AWS profiles found.')
@@ -90,7 +124,8 @@ async function main () {
   const flags = mri(process.argv.slice(2), {
     alias: {
       c: 'current',
-      h: 'help'
+      h: 'help',
+      r: 'refresh'
     }
   })
 
@@ -102,6 +137,23 @@ async function main () {
   if (flags.current) {
     console.log(currentProfile)
     process.exit(0)
+  }
+
+  if (flags.debug) {
+    process.env.DEBUG = 'awsctx'
+    debug('debug mode enabled')
+  }
+
+  if (flags.refresh) {
+    const profile = flags._[0] || currentProfile
+    debug('refresh requested', { profile, isSSOProfile: profile in ssoProfiles })
+    if (profile in ssoProfiles) {
+      execSync(`aws sso login --profile ${profile}`, { stdio: 'inherit' })
+      process.exit(0)
+    } else {
+      console.error(`Profile '${profile}' is not an SSO profile`)
+      process.exit(1)
+    }
   }
 
   try {
@@ -119,9 +171,16 @@ async function main () {
     fs.writeFileSync(profileFile, selectedProfile)
 
     if (selectedProfile in ssoProfiles) {
-      if (!isSSOSessionValid()) {
+      debug('selected profile is SSO profile', JSON.stringify({ selectedProfile, ssoConfig: ssoProfiles[selectedProfile] }, null, 2))
+      const isValid = isSSOSessionValid()
+      if (!isValid) {
+        debug('SSO session invalid, initiating login', { selectedProfile })
         execSync(`aws sso login --profile ${selectedProfile}`, { stdio: 'inherit' })
+      } else {
+        debug('SSO session is valid, skipping login', { selectedProfile })
       }
+    } else {
+      debug('selected profile is not SSO profile', { selectedProfile })
     }
 
     execSync(`exec ${process.env.SHELL}`, { stdio: 'inherit' })
