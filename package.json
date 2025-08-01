@@ -11,6 +11,7 @@
     "name": "Kiko Beats",
     "url": "https://kikobeats.com"
   },
+  "contributors": [],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/kikobeats/awsctx.git"
@@ -18,14 +19,11 @@
   "bugs": {
     "url": "https://github.com/kikobeats/awsctx/issues"
   },
-  "files": [
-    "bin"
-  ],
   "keywords": [
     "aws",
+    "awsctx",
     "profile",
-    "switch",
-    "awsctx"
+    "switch"
   ],
   "dependencies": {
     "@inquirer/prompts": "~7.7.1",
@@ -50,6 +48,9 @@
   "engines": {
     "node": ">= 20"
   },
+  "files": [
+    "bin"
+  ],
   "scripts": {
     "clean": "rm -rf node_modules",
     "contributors": "(npx git-authors-cli && npx finepack && git add package.json && git commit -m 'build: contributors' --no-verify) || true",
