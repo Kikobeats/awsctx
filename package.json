@@ -2,7 +2,7 @@
   "name": "awsctx",
   "description": "AWS profile switcher. Faster way to switch between profiles",
   "homepage": "https://github.com/kikobeats/awsctx",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "bin": {
     "awsctx": "bin/index.js"
   },
