@@ -1,6 +1,6 @@
 {
   "name": "awsctx",
-  "description": "AWS profile switcher. Faster way to switch between profiles",
+  "description": "Switch AWS CLI profiles quickly from the terminal — faster AWS_PROFILE switching for multi-account work.",
   "homepage": "https://github.com/kikobeats/awsctx",
   "version": "0.0.10",
   "bin": {
@@ -21,8 +21,14 @@
   },
   "keywords": [
     "aws",
+    "aws-cli",
     "awsctx",
+    "cli",
+    "config",
+    "credentials",
+    "multi-account",
     "profile",
+    "shell",
     "switch"
   ],
   "dependencies": {
